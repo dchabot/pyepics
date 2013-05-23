@@ -98,13 +98,14 @@ class PVMixin(object):
 
         Classes deriving directly from PVMixin must override OnPVChange()
     """
-    def __init__(self, pv=None, pvname=None):
+    def __init__(self, pv=None, pvname=None, use_charval=True):
         self.pv = None
         if pv is None and pvname is not None:
             pv = pvname
         if pv is not None:
             self.SetPV(pv)
 
+        self.__usecharval = use_charval
         self._popupmenu = None
         self.Bind(wx.EVT_RIGHT_DOWN, self._onRightDown)
             
@@ -192,10 +193,11 @@ class PVMixin(object):
         "epics PV callback function"
         if pvname is None or value is None or wid is None:
             return
-        if char_value is None and value is not None:
+        if (not self.__use_charval or
+            (char_value is None and value is not None):
             prec = kws.get('precision', None)
             if prec not in (None, 0):
-                char_value = ("%%.%if" % prec) % value
+                char_value = ("%%.%ig" % prec) % value
             else:
                 char_value = set_float(value)
         self.OnPVChange(char_value)
@@ -262,8 +264,9 @@ class PVCtrlMixin(PVMixin):
 
     """
 
-    def __init__(self, pv=None, pvname=None, font=None, fg=None, bg=None):
-        PVMixin.__init__(self, pv, pvname)
+    def __init__(self, pv=None, pvname=None, font=None, fg=None, bg=None,
+                 use_charval=True):
+        PVMixin.__init__(self, pv, pvname, use_charval=use_charval)
 
         self._translations = {}
         self._fg_colour_translations = None
@@ -513,7 +516,8 @@ class PVText(wx.StaticText, PVCtrlMixin):
     def __init__(self, parent, pv=None, as_string=True,
                  font=None, fg=None, bg=None, style=None,
                  minor_alarm="DARKRED", major_alarm="RED",
-                 invalid_alarm="ORANGERED", auto_units=False, units="", **kw):
+                 invalid_alarm="ORANGERED", auto_units=False,
+                 units="", use_charval=True, **kw):
         """
         Create a new pvText
 
@@ -532,7 +536,8 @@ class PVText(wx.StaticText, PVCtrlMixin):
 
         wx.StaticText.__init__(self, parent, wx.ID_ANY, label='',
                                style=wstyle, **kw)
-        PVCtrlMixin.__init__(self, pv=pv, font=font, fg=None, bg=None)
+        PVCtrlMixin.__init__(self, pv=pv, font=font, fg=None, bg=None,
+                             use_charval=use_charval)
 
         self.as_string = as_string
         self.auto_units = auto_units
@@ -750,7 +755,7 @@ class PVFloatCtrl(FloatCtrl, PVCtrlMixin):
         if char_value is None and value is not None:
             prec = kw.get('precision', None)
             if prec not in (None, 0):
-                char_value = ("%%.%if" % prec) % value
+                char_value = ("%%.%ig" % prec) % value
             else:
                 char_value = set_float(value)
 
